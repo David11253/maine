@@ -4,6 +4,7 @@ let lastX, lastY;
 let rotateX = 0, rotateY = 0;
 let distance = 5;
 
+// Функция для создания блоков
 function createBlock(type, x, y, z, s) {
     if (!blocks[type]) return;
 
@@ -42,36 +43,88 @@ blocksData.forEach(block => {
     createBlock(block.type, block.position.x, block.position.y, block.position.z, block.position.s);
 });
 
-// Управление камерой
-document.addEventListener("mousedown", (e) => {
-    if (e.button === 0) {
-        isMouseDown = true;
+// Управление камерой для мыши
+const mouseHandler = {
+    onMouseDown: (e) => {
+        if (e.button === 0) {
+            isMouseDown = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+        }
+    },
+
+    onMouseUp: () => {
+        isMouseDown = false;
+    },
+
+    onMouseMove: (e) => {
+        if (!isMouseDown) return;
+
+        let deltaX = e.clientX - lastX;
+        let deltaY = e.clientY - lastY;
         lastX = e.clientX;
         lastY = e.clientY;
+
+        rotateY += deltaX * 0.3;
+        rotateX -= deltaY * 0.3;
+
+        scene.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${distance * -100}px)`;
+    },
+
+    onWheel: (e) => {
+        distance += e.deltaY * 0.01;
+        distance = Math.max(2, Math.min(10, distance));
+        scene.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${distance * -100}px)`;
     }
-});
+};
 
-document.addEventListener("mouseup", () => {
-    isMouseDown = false;
-});
+// Поддержка мыши
+document.addEventListener("mousedown", mouseHandler.onMouseDown);
+document.addEventListener("mouseup", mouseHandler.onMouseUp);
+document.addEventListener("mousemove", mouseHandler.onMouseMove);
+document.addEventListener("wheel", mouseHandler.onWheel);
 
-document.addEventListener("mousemove", (e) => {
-    if (!isMouseDown) return;
+// Поддержка мобильных устройств (тач-события)
+const touchHandler = {
+    onTouchStart: (e) => {
+        if (e.touches.length === 1) {
+            isMouseDown = true;
+            lastX = e.touches[0].clientX;
+            lastY = e.touches[0].clientY;
+        }
+    },
 
-    let deltaX = e.clientX - lastX;
-    let deltaY = e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
+    onTouchEnd: () => {
+        isMouseDown = false;
+    },
 
-    rotateY += deltaX * 0.3;
-    rotateX -= deltaY * 0.3;
+    onTouchMove: (e) => {
+        if (!isMouseDown || e.touches.length !== 1) return;
 
-    scene.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${distance * -100}px)`;
-});
+        let deltaX = e.touches[0].clientX - lastX;
+        let deltaY = e.touches[0].clientY - lastY;
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
 
-// Зум колёсиком
-document.addEventListener("wheel", (e) => {
-    distance += e.deltaY * 0.01;
-    distance = Math.max(2, Math.min(10, distance));
-    scene.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${distance * -100}px)`;
-});
+        rotateY += deltaX * 0.3;
+        rotateX -= deltaY * 0.3;
+
+        scene.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${distance * -100}px)`;
+    },
+
+    onTouchMoveZoom: (e) => {
+        if (e.touches.length === 2) {
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const dist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+            distance = Math.max(2, Math.min(10, dist * 0.01));
+            scene.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${distance * -100}px)`;
+        }
+    }
+};
+
+// Подключаем обработчики тач-событий
+document.addEventListener("touchstart", touchHandler.onTouchStart);
+document.addEventListener("touchend", touchHandler.onTouchEnd);
+document.addEventListener("touchmove", touchHandler.onTouchMove);
+document.addEventListener("touchmove", touchHandler.onTouchMoveZoom, { passive: false });
